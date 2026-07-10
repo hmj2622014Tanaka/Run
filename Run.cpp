@@ -48,6 +48,19 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	const int JUMP_POWER = -20;
 	const int GRAVITY = 1;
 
+	// アイテムの変数
+	int itemStock = 0;
+	int invincibleTimer = 0;
+	const int INVINCIBLE_DURATION = 300;
+
+	struct Item {
+		int x, y;
+		int width, height;
+		bool visible;
+	};
+	Item starItem;
+	int imgItem = LoadGraph("image/star.png");
+
 	enum TogeType
 	{
 		TOGE_1 = 0,
@@ -108,7 +121,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 		{
 			toges[i].visible = false;
 		}
-		};
+
+		itemStock = 0;
+		invincibleTimer = 0;
+		starItem.width = 60;
+		starItem.height = 60;
+		starItem.visible = false;
+	};
 
 	// 最初に1回初期化を実行しておく
 	InitGame();
@@ -128,173 +147,201 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 		{
 		case SCENE_TITLE: //タイトル画面
 
-			// 描画：背景だけ動かさずに表示
-			DrawGraph(bgx, 0, imgBG, false);
-			DrawGraph(bgx + WIDTH, 0, imgBG, false);
+				// 描画：背景だけ動かさずに表示
+				DrawGraph(bgx, 0, imgBG, false);
+				DrawGraph(bgx + WIDTH, 0, imgBG, false);
 
-			// 描画：タイトル文字と案内
-			DrawString(WIDTH / 2 - 180, HEIGHT / 2 - 100, "普通じゃない RUN GAME !!", GetColor(255, 255, 0));
-			DrawString(WIDTH / 2 - 140, HEIGHT / 2 - 80, "初見殺しあり！！", GetColor(255, 0, 0));
-			DrawFormatString(WIDTH / 2 - 120, HEIGHT / 2 - 30, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
-			DrawString(WIDTH / 2 - 195, HEIGHT / 2 + 60, "Enterキーを押してゲームスタート", GetColor(255, 255, 255));
+				// 描画：タイトル文字と案内
+				DrawString(WIDTH / 2 - 120, HEIGHT / 2 - 100, "RUN GAME !!", GetColor(255, 255, 0));
+				DrawString(WIDTH / 2 - 140, HEIGHT / 2 - 80, "初見殺しあり！！", GetColor(255, 0, 0));
+				DrawFormatString(WIDTH / 2 - 120, HEIGHT / 2 - 30, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
+				DrawString(WIDTH / 2 - 195, HEIGHT / 2 + 60, "Enterキーを押してゲームスタート", GetColor(255, 255, 255));
 
-			//Enterキー（RETURN）が押されたらゲーム本編へ
-			if (KeyBuf[KEY_INPUT_RETURN] == 1)
-			{
-				InitGame();     // ゲームの状態をリセット
-				score = 0;
+				//Enterキー（RETURN）が押されたらゲーム本編へ
+				if (KeyBuf[KEY_INPUT_RETURN] == 1)
+				{
+					InitGame();     // ゲームの状態をリセット
+					score = 0;
 
-				// タイトルBGMを止めて、ゲームBGMをループ再生する
-				StopSoundMem(bgmTitle);
-				PlaySoundMem(bgmGame, DX_PLAYTYPE_LOOP);
+					// タイトルBGMを止めて、ゲームBGMをループ再生する
+					StopSoundMem(bgmTitle);
+					PlaySoundMem(bgmGame, DX_PLAYTYPE_LOOP);
 
-				Scene = SCENE_GAME;  // シーンをゲーム本編に変える
-			}
-			break;
+					Scene = SCENE_GAME;  // シーンをゲーム本編に変える
+				}
+				break;
 
 		case SCENE_GAME: // ゲーム本編
 
-			score++;
+				score++;
 
-			if (score < 4000)
-			{
-				isReversed = false;
-			}
-			else
-			{
-				if (((score - 4000) / 1500) % 2 == 1)
+				if (KeyBuf[KEY_INPUT_SPACE] == 1 && itemStock > 0 && invincibleTimer == 0)
 				{
-					isReversed = true;
+					itemStock--;
+					invincibleTimer = INVINCIBLE_DURATION;
+					PlaySoundMem(seHit, DX_PLAYTYPE_BACK);
+				}
+
+				if (invincibleTimer > 0)
+				{
+					invincibleTimer--;
+				}
+
+				if (score < 4000) { isReversed = false; }
+				else { isReversed = (((score - 4000) / 1500) % 2 == 1); }
+
+				// 背景のスクロール処理
+				bgx = bgx - 5;
+				if (bgx <= -WIDTH) bgx = 0;
+				DrawGraph(bgx, 0, imgBG, false);
+				DrawGraph(bgx + WIDTH, 0, imgBG, false);
+
+				// プレイヤーの移動
+				if (!isReversed)
+				{
+					if (KeyBuf[KEY_INPUT_D] == 1)
+					{
+						playerX += MOVE_SPEED;
+						isRight = true;
+					}
+					if (KeyBuf[KEY_INPUT_A] == 1)
+					{
+						playerX -= MOVE_SPEED;
+						isRight = false;
+					}
 				}
 				else
 				{
-					isReversed = false;
+					if (KeyBuf[KEY_INPUT_D] == 1)
+					{
+						playerX -= MOVE_SPEED;
+						isRight = false;
+					}
+					if (KeyBuf[KEY_INPUT_A] == 1)
+					{
+						playerX += MOVE_SPEED;
+						isRight = true;
+					}
 				}
-			}
+				if (playerX < 0) playerX = 0;
+				if (playerX > WIDTH - playerWidth) playerX = WIDTH - playerWidth;
 
-			// 背景のスクロール処理
-			bgx = bgx - 5;
-			if (bgx <= -WIDTH) bgx = 0;
-			DrawGraph(bgx, 0, imgBG, false);
-			DrawGraph(bgx + WIDTH, 0, imgBG, false);
-
-			// プレイヤーの移動
-			if (!isReversed)
-			{
-				if (KeyBuf[KEY_INPUT_D] == 1)
+				// ジャンプ処理
+				if (KeyBuf[KEY_INPUT_W] == 1 && !isJumping)
 				{
-					playerX += MOVE_SPEED;
-					isRight = true;
+					PlayerVY = JUMP_POWER;
+					isJumping = true;
 				}
-				if (KeyBuf[KEY_INPUT_A] == 1)
-				{
-					playerX -= MOVE_SPEED;
-					isRight = false;
-				}
-			}
-			else
-			{
-				if (KeyBuf[KEY_INPUT_D] == 1)
-				{
-					playerX -= MOVE_SPEED;
-					isRight = false;
-				}
-				if (KeyBuf[KEY_INPUT_A] == 1)
-				{
-					playerX += MOVE_SPEED;
-					isRight = true;
-				}
-			}
-			if (playerX < 0) playerX = 0;
-			if (playerX > WIDTH - playerWidth) playerX = WIDTH - playerWidth;
 
-			// ジャンプ処理
-			if (KeyBuf[KEY_INPUT_W] == 1 && !isJumping)
-			{
-				PlayerVY = JUMP_POWER;
-				isJumping = true;
-			}
+				// 物理演算と着地
+				PlayerVY += GRAVITY;
+				playerY += PlayerVY;
+				if (playerY + playerHeight >= GROUND_Y)
+				{
+					playerY = GROUND_Y - playerHeight;
+					PlayerVY = 0;
+					isJumping = false;
+				}
 
-			// 物理演算と着地
-			PlayerVY += GRAVITY;
-			playerY += PlayerVY;
-			if (playerY + playerHeight >= GROUND_Y)
-			{
-				playerY = GROUND_Y - playerHeight;
-				PlayerVY = 0;
-				isJumping = false;
-			}
+				// アイテムの生成
+				if (!starItem.visible && score % 500 == 0)
+				{
+					if (GetRand(9) < 2)
+					{
+						starItem.visible = true;
+						starItem.x = WIDTH;
+						starItem.y = GROUND_Y - starItem.height;
+					}
+				}
 
-			// とげの生成
-			togeTimer++;
-			if (togeTimer >= TOGE_APPEAR_INTERVAL)
-			{
-				togeTimer = 0;
+				if (starItem.visible)
+				{
+					starItem.x -= 5;
+
+					if (CheckCollision(playerX, playerY, playerWidth, playerHeight, starItem.x, starItem.y, starItem.width, starItem.height))
+					{
+						itemStock++;
+						starItem.visible = false;
+					}
+
+					if (starItem.x + starItem.width < 0)
+					{
+						starItem.visible = false;
+					}
+
+					DrawExtendGraph(starItem.x, starItem.y, starItem.x + starItem.width, starItem.y + starItem.height, imgItem, true);
+				}
+
+				// とげの生成
+				togeTimer++;
+				if (togeTimer >= TOGE_APPEAR_INTERVAL)
+				{
+					togeTimer = 0;
+					for (int i = 0; i < MAX_TOGE; ++i)
+					{
+						if (!toges[i].visible)
+						{
+							toges[i].visible = true;
+							toges[i].x = WIDTH;
+							toges[i].type = (TogeType)GetRand(TOGE_MAX - 1);
+							toges[i].y = GROUND_Y - togeHeights[toges[i].type];
+							toges[i].vy = 0;
+							toges[i].isLaunched = false;
+							toges[i].isChecked = false;
+							break;
+						}
+					}
+				}
+
+				// とげの移動・描画・当たり判定
 				for (int i = 0; i < MAX_TOGE; ++i)
 				{
-					if (!toges[i].visible)
+					if (toges[i].visible)
 					{
-						toges[i].visible = true;
-						toges[i].x = WIDTH;
-						toges[i].type = (TogeType)GetRand(TOGE_MAX - 1);
-						toges[i].y = GROUND_Y - togeHeights[toges[i].type];
-						toges[i].vy = 0;
-						toges[i].isLaunched = false;
-						toges[i].isChecked = false;
-						break;
-					}
-				}
-			}
-
-			// とげの移動・描画・当たり判定
-			for (int i = 0; i < MAX_TOGE; ++i)
-			{
-				if (toges[i].visible)
-				{
-					if (!isReversed)
-					{
-						toges[i].x -= 5; // 左へ移動
-					}
-					else
-					{
-						toges[i].x -= 5;
-					}
-
-					int type = toges[i].type;
-
-					if (type == TOGE_4 && !toges[i].isChecked)
-					{
-						if (toges[i].x > playerX && (toges[i].x - playerX) < 300)
+						if (!isReversed)
 						{
-							int tmpRand = GetRand(9);
-							if (tmpRand < 3)
+							toges[i].x -= 5; // 左へ移動
+						}
+						else
+						{
+							toges[i].x -= 5;
+						}
+
+						int type = toges[i].type;
+
+						if (type == TOGE_4 && !toges[i].isChecked)
+						{
+							if (toges[i].x > playerX && (toges[i].x - playerX) < 300)
 							{
-								toges[i].vy = -25;
-								toges[i].isLaunched = true;
+								int tmpRand = GetRand(9);
+								if (tmpRand < 3)
+								{
+									toges[i].vy = -25;
+									toges[i].isLaunched = true;
+								}
+								toges[i].isChecked = true;
 							}
-							toges[i].isChecked = true;
 						}
-					}
 
-					if (toges[i].isLaunched)
-					{
-						toges[i].y += toges[i].vy;
-						toges[i].vy += 1;
-					}
-
-					if (toges[i].x + togeWidths[type] < 0)
-					{
-						toges[i].visible = false;
-					}
-
-					// 当たり判定：当たったらゲームオーバーシーンへ
-					if (CheckCollision(playerX, playerY, playerWidth, playerHeight,
-						toges[i].x, toges[i].y, togeWidths[type], togeHeights[type]))
-					{
-						if (score > highScore)
+						if (toges[i].isLaunched)
 						{
-							highScore = score;
+							toges[i].y += toges[i].vy;
+							toges[i].vy += 1;
 						}
+
+						if (toges[i].x + togeWidths[type] < 0)
+						{
+							toges[i].visible = false;
+						}
+
+						// 当たり判定：当たったらゲームオーバーシーンへ
+						if (invincibleTimer == 0 && CheckCollision(playerX, playerY, playerWidth, playerHeight,
+							toges[i].x, toges[i].y, togeWidths[type], togeHeights[type]))
+						{
+							if (score > highScore)
+							{
+								highScore = score;
+							}
 
 						// ゲームBGMを止め、とげヒットSEを1回再生し、ゲームオーバーBGMをループ再生する
 						StopSoundMem(bgmGame);
@@ -302,71 +349,82 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 						PlaySoundMem(bgmGameOver, DX_PLAYTYPE_LOOP);
 
 						Scene = SCENE_GAMEOVER;
+						}
+
+						// とげの描画
+						DrawExtendGraph(toges[i].x, toges[i].y,
+							toges[i].x + togeWidths[type],
+							toges[i].y + togeHeights[type],
+							imgToge[type], TRUE);
 					}
-
-					// とげの描画
-					DrawExtendGraph(toges[i].x, toges[i].y,
-						toges[i].x + togeWidths[type],
-						toges[i].y + togeHeights[type],
-						imgToge[type], TRUE);
 				}
-			}
 
-			// プレイヤーの描画
-			if (isRight)
-			{
-				DrawExtendGraph(playerX + playerWidth, playerY, playerX, playerY + playerHeight, imgPlayer, true);
-			}
-			else
-			{
-				DrawExtendGraph(playerX, playerY, playerX + playerWidth, playerY + playerHeight, imgPlayer, true);
-			}
+				// プレイヤーの描画
+				if (invincibleTimer > 0 && (invincibleTimer / 4) % 2 == 0){}
+				else
+				{
+					if (isRight)
+					{
+						DrawExtendGraph(playerX + playerWidth, playerY, playerX, playerY + playerHeight, imgPlayer, true);
+					}
+					else
+					{
+						DrawExtendGraph(playerX, playerY, playerX + playerWidth, playerY + playerHeight, imgPlayer, true);
+					}
+				}
 
-			DrawFormatString(50, 50, GetColor(255, 255, 255), "SCORE: %d", score);
-			DrawFormatString(50, 90, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
-			if (isReversed)
-			{
-				SetFontSize(48);
-				DrawString(WIDTH / 2 - 350, 100, "WARNING: REVERSE CONTROL!!", GetColor(255, 0, 0));
-				SetFontSize(16);
-			}
-			break;
+				DrawFormatString(50, 50, GetColor(255, 255, 255), "SCORE: %d", score);
+				DrawFormatString(50, 90, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
+
+				DrawFormatString(50, 130, GetColor(255, 255, 0), "ITEM STOCK: %d [Press Space to USE]", itemStock);
+				if (invincibleTimer > 0)
+				{
+					DrawFormatString(50, 170, GetColor(255, 64, 64), "INVINCIBLE: %d", invincibleTimer);
+				}
+
+				if (isReversed)
+				{
+					SetFontSize(48);
+					DrawString(WIDTH / 2 - 350, 100, "WARNING: REVERSE CONTROL!!", GetColor(255, 0, 0));
+					SetFontSize(16);
+				}
+				break;
 
 		case SCENE_GAMEOVER: // ゲームオーバー
 
-			// 背景ととげは「その場に止まった状態」で描画
-			DrawGraph(bgx, 0, imgBG, false);
-			DrawGraph(bgx + WIDTH, 0, imgBG, false);
-			for (int i = 0; i < MAX_TOGE; ++i)
-			{
-				if (toges[i].visible)
+				// 背景ととげは「その場に止まった状態」で描画
+				DrawGraph(bgx, 0, imgBG, false);
+				DrawGraph(bgx + WIDTH, 0, imgBG, false);
+				for (int i = 0; i < MAX_TOGE; ++i)
 				{
-					int type = toges[i].type;
-					DrawExtendGraph(toges[i].x, toges[i].y, toges[i].x + togeWidths[type], toges[i].y + togeHeights[type], imgToge[type], TRUE);
+					if (toges[i].visible)
+					{
+						int type = toges[i].type;
+						DrawExtendGraph(toges[i].x, toges[i].y, toges[i].x + togeWidths[type], toges[i].y + togeHeights[type], imgToge[type], TRUE);
+					}
 				}
-			}
 
-			// ゲームオーバー画面用の文字表示
-			DrawString(WIDTH / 2 - 120, HEIGHT / 2 - 100, "GAME OVER", GetColor(255, 0, 0));
-			DrawFormatString(WIDTH / 2 - 140, HEIGHT / 2 - 60, GetColor(255, 255, 255), "YOUR SCORE: %d", score);
-			DrawFormatString(WIDTH / 2 - 130, HEIGHT / 2 - 10, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
-			DrawString(WIDTH / 2 - 200, HEIGHT / 2 + 40, "Spaceキーを押してタイトルへ戻る", GetColor(255, 255, 255));
+				// ゲームオーバー画面用の文字表示
+				DrawString(WIDTH / 2 - 120, HEIGHT / 2 - 100, "GAME OVER", GetColor(255, 0, 0));
+				DrawFormatString(WIDTH / 2 - 140, HEIGHT / 2 - 60, GetColor(255, 255, 255), "YOUR SCORE: %d", score);
+				DrawFormatString(WIDTH / 2 - 130, HEIGHT / 2 - 10, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
+				DrawString(WIDTH / 2 - 200, HEIGHT / 2 + 40, "Spaceキーを押してタイトルへ戻る", GetColor(255, 255, 255));
 
-			// Enterキーが押されたらタイトル画面に戻す
-			if (KeyBuf[KEY_INPUT_SPACE] == 1)
-			{
-				// ゲームオーバーBGMを止め、タイトルBGMをループ再生する
-				StopSoundMem(bgmGameOver);
-				PlaySoundMem(bgmTitle, DX_PLAYTYPE_LOOP);
+				// Enterキーが押されたらタイトル画面に戻す
+				if (KeyBuf[KEY_INPUT_SPACE] == 1)
+				{
+					// ゲームオーバーBGMを止め、タイトルBGMをループ再生する
+					StopSoundMem(bgmGameOver);
+					PlaySoundMem(bgmTitle, DX_PLAYTYPE_LOOP);
 
-				Scene = SCENE_TITLE; // タイトルシーンに切り替え
-			}
-			break;
+					Scene = SCENE_TITLE; // タイトルシーンに切り替え
+				}
+				break;
 		}
-		ScreenFlip();
-		WaitTimer(16);
-		if (ProcessMessage() == -1) break;
-		if (KeyBuf[KEY_INPUT_ESCAPE] == 1) break;
+			ScreenFlip();
+			WaitTimer(16);
+			if (ProcessMessage() == -1) break;
+			if (KeyBuf[KEY_INPUT_ESCAPE] == 1) break;
 	}
 	DxLib_End();
 	return 0;
