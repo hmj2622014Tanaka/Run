@@ -375,7 +375,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 				DrawFormatString(50, 50, GetColor(255, 255, 255), "SCORE: %d", score);
 				DrawFormatString(50, 90, GetColor(0, 255, 255), "HI-SCORE: %d", highScore);
-
 				DrawFormatString(50, 130, GetColor(255, 255, 0), "ITEM STOCK: %d [Press Space to USE]", itemStock);
 				if (invincibleTimer > 0)
 				{
