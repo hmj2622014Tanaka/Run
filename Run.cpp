@@ -44,7 +44,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	int playerX, playerY, PlayerVY;
 	bool isJumping, isRight;
 
-	const int MOVE_SPEED = 8;
+	const int MOVE_SPEED = 10;
 	const int JUMP_POWER = -20;
 	const int GRAVITY = 1;
 
@@ -93,7 +93,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 	Toge toges[MAX_TOGE];
 
 	int togeTimer;
-	const int TOGE_APPEAR_INTERVAL = 120;
+	const int TOGE_APPEAR_INTERVAL = 100;
 
 	enum SceneType
 	{
@@ -187,14 +187,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 					invincibleTimer--;
 				}
 
-				if (score < 4000) { isReversed = false; }
-				else { isReversed = (((score - 4000) / 1500) % 2 == 1); }
+				if (score < 500) { isReversed = false; }
+				else { isReversed = (((score - 500) / 1500) % 2 == 1); }
 
-				// 背景のスクロール処理
-				bgx = bgx - 5;
+				// 背景のスクロール
+				bgx = bgx - 8;
 				if (bgx <= -WIDTH) bgx = 0;
-				DrawGraph(bgx, 0, imgBG, false);
-				DrawGraph(bgx + WIDTH, 0, imgBG, false);
+				DrawExtendGraph(bgx - 10, 0, bgx + WIDTH + 10, HEIGHT, imgBG, false);
+				DrawExtendGraph(bgx + WIDTH - 10, 0, bgx + (WIDTH * 2) + 10, HEIGHT, imgBG, false);
 
 				// プレイヤーの移動
 				if (!isReversed)
@@ -244,9 +244,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 				}
 
 				// アイテムの生成
-				if (!starItem.visible && score % 500 == 0)
+				if (!starItem.visible && score % 250 == 0)
 				{
-					if (GetRand(9) < 2)
+					if (GetRand(9) < 3)
 					{
 						starItem.visible = true;
 						starItem.x = WIDTH;
@@ -256,7 +256,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
 				if (starItem.visible)
 				{
-					starItem.x -= 5;
+					starItem.x -= 8;
 
 					if (CheckCollision(playerX, playerY, playerWidth, playerHeight, starItem.x, starItem.y, starItem.width, starItem.height))
 					{
@@ -298,14 +298,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 				{
 					if (toges[i].visible)
 					{
-						if (!isReversed)
-						{
-							toges[i].x -= 5; // 左へ移動
-						}
-						else
-						{
-							toges[i].x -= 5;
-						}
+						toges[i].x -= 8;
 
 						int type = toges[i].type;
 
@@ -335,20 +328,28 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 						}
 
 						// 当たり判定：当たったらゲームオーバーシーンへ
+						int padX = 20;
+						int padY = 20;
+
+						int hitX = toges[i].x + padX;
+						int hitY = toges[i].y + padY;
+						int hitW = togeWidths[type] - (padX * 2);
+						int hitH = togeHeights[type] - (padY * 2);
+
 						if (invincibleTimer == 0 && CheckCollision(playerX, playerY, playerWidth, playerHeight,
-							toges[i].x, toges[i].y, togeWidths[type], togeHeights[type]))
+							hitX, hitY, hitW, hitH))
 						{
 							if (score > highScore)
 							{
 								highScore = score;
 							}
 
-						// ゲームBGMを止め、とげヒットSEを1回再生し、ゲームオーバーBGMをループ再生する
-						StopSoundMem(bgmGame);
-						PlaySoundMem(seHit, DX_PLAYTYPE_BACK); // BACKは裏で1回だけ流す設定
-						PlaySoundMem(bgmGameOver, DX_PLAYTYPE_LOOP);
+							// ゲームBGMを止め、とげヒットSEを1回再生し、ゲームオーバーBGMをループ再生する
+							StopSoundMem(bgmGame);
+							PlaySoundMem(seHit, DX_PLAYTYPE_BACK);
+							PlaySoundMem(bgmGameOver, DX_PLAYTYPE_LOOP);
 
-						Scene = SCENE_GAMEOVER;
+							Scene = SCENE_GAMEOVER;
 						}
 
 						// とげの描画
@@ -392,8 +393,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 		case SCENE_GAMEOVER: // ゲームオーバー
 
 				// 背景ととげは「その場に止まった状態」で描画
-				DrawGraph(bgx, 0, imgBG, false);
-				DrawGraph(bgx + WIDTH, 0, imgBG, false);
+				DrawExtendGraph(bgx - 10, 0, bgx + WIDTH + 10, HEIGHT, imgBG, false);
+				DrawExtendGraph(bgx + WIDTH - 10, 0, bgx + (WIDTH * 2) + 10, HEIGHT, imgBG, false);
 				for (int i = 0; i < MAX_TOGE; ++i)
 				{
 					if (toges[i].visible)
